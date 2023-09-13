@@ -35,11 +35,24 @@
         state: latest
         update_cache: true
 
+    - name: Check if a reboot is required
+      ansible.builtin.stat:
+        path: /var/run/reboot-required
+        get_checksum: false
+      register: reboot_required_file
+
+    - name: Reboot server if required
+      ansible.builtin.reboot:
+      when: reboot_required_file.stat.exists == true
+
+    - name: Remove unused dependencies
+      ansible.builtin.apt:
+        autoremove: true
+
     - name: Install pre-req software via apt
       ansible.builtin.apt:
         name: "{{ item.name }}"
         state: latest
-        update_cache: true
       loop: "{{ prereq_software }}"
 
     # It currently seems as though apt-key doesn't handle gpg keys well, so this is a temporary workaround
@@ -53,7 +66,6 @@
       ansible.builtin.apt_repository:
         repo: "deb [arch=amd64 signed-by=/etc/apt/keyrings/docker.gpg] https://download.docker.com/linux/ubuntu jammy stable"
         state: present
-        update_cache: false
 
     # It currently seems as though apt-key doesn't handle gpg keys well, so this is a temporary workaround
     - name: Download k8s GPG key
@@ -67,7 +79,6 @@
       ansible.builtin.apt_repository:
         repo: "deb [signed-by=/etc/apt/trusted.gpg.d/kubernetes.asc] https://pkgs.k8s.io/core:/stable:/v1.28/deb/ /"
         state: present
-        update_cache: false
 
     # Setting the necessary kernel modules for k8s
     - name: Create /etc/modules-load.d/k8s.conf
