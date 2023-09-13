@@ -28,14 +28,6 @@ build {
   name    = "kubeadm-base-packer"
   sources = ["source.digitalocean.kubeadm-base"]
 
-  #provisioner "shell" {
-  #  inline = [
-  #    "sudo apt-get update",
-  #    # This basically forces things like openssh-server to upgrade without prompting for input
-  #    "sudo DEBIAN_FRONTEND=noninteractive apt-get upgrade -o Dpkg::Options::='--force-confnew' -y"
-  #  ]
-  #}
-
   provisioner "ansible" {
     playbook_file = "./ansible/k8s_worker.yaml"
   }
