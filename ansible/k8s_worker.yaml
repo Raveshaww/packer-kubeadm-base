@@ -6,136 +6,135 @@
     - vars/ports.yaml
     - vars/software.yaml
   tasks:
-  - name: Open Ports in UFW
-    ansible.builtin.ufw:
-      rule: allow
-      port: "{{ item.port }}"
-      proto: "{{ item.proto }}"
-    loop: "{{ ports }}"
+    - name: Open Ports in UFW
+      community.general.ufw:
+        rule: allow
+        port: "{{ item.port }}"
+        proto: "{{ item.proto }}"
+      loop: "{{ ports }}"
 
-  - name: Enable UFW
-    ansible.builtin.ufw:
-      state: enabled
+    - name: Enable UFW
+      community.general.ufw:
+        state: enabled
 
-  # Kubeadm requires that swap is disabled on nodes, and this will ensure that swap is not renable upon boot
-  - name: Remove swap from /etc/fstab
-    ansible.builtin.replace:
+    # Kubeadm requires that swap is disabled on nodes, and this will ensure that swap is not renable upon boot
+    - name: Remove swap from /etc/fstab
+      ansible.builtin.replace:
         path: /etc/fstab
         regexp: '^([^#].*?\sswap\s+sw\s+.*)$'
         replace: '# \1'
 
-  # This turns off swap for the current session
-  - name: Disable swap
-    ansible.builtin.shell: sudo swapoff -a
+    # This turns off swap for the current session
+    - name: Disable swap
+      ansible.builtin.shell: sudo swapoff -a
 
   # Installing pre-req software for kubeadm, kubelet, and containerd
-  - name: Update all software on node
-    ansible.builtin.apt:
-      name: "*"
-      state: latest
-      update_cache: true
+    - name: Update all software on node
+      ansible.builtin.apt:
+        name: "*"
+        state: latest
+        update_cache: true
 
-  - name: Install pre-req software via apt
-    ansible.builtin.apt:
-      name: "{{ item.name }}"
-      state: latest
-      update_cache: true
-    loop: "{{ prereq_software }}"
+    - name: Install pre-req software via apt
+      ansible.builtin.apt:
+        name: "{{ item.name }}"
+        state: latest
+        update_cache: true
+      loop: "{{ prereq_software }}"
 
-  # It currently seems as though apt-key doesn't handle gpg keys well, so this is a temporary workaround  
-  - name: Download Docker GPG key
-    ansible.builtin.shell: curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo gpg --dearmor -o /etc/apt/keyrings/docker.gpg
+    # It currently seems as though apt-key doesn't handle gpg keys well, so this is a temporary workaround
+    - name: Download Docker GPG key
+      ansible.builtin.shell: curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo gpg --dearmor -o /etc/apt/keyrings/docker.gpg
 
-  - name: Set read permissions on Docker GPG key  
-    ansible.builtin.shell: sudo chmod a+r /etc/apt/keyrings/docker.gpg
+    - name: Set read permissions on Docker GPG key
+      ansible.builtin.shell: sudo chmod a+r /etc/apt/keyrings/docker.gpg
 
-  - name: Add Docker APT repo
-    ansible.builtin.apt_repository:
-      repo: "deb [arch=amd64 signed-by=/etc/apt/keyrings/docker.gpg] https://download.docker.com/linux/ubuntu jammy stable"
-      state: present
-      update_cache: false
+    - name: Add Docker APT repo
+      ansible.builtin.apt_repository:
+        repo: "deb [arch=amd64 signed-by=/etc/apt/keyrings/docker.gpg] https://download.docker.com/linux/ubuntu jammy stable"
+        state: present
+        update_cache: false
 
-  # It currently seems as though apt-key doesn't handle gpg keys well, so this is a temporary workaround    
-  - name: Download k8s GPG key
-    ansible.builtin.get_url:
-      url: "https://pkgs.k8s.io/core:/stable:/v1.28/deb/Release.key"
-      dest: /etc/apt/trusted.gpg.d/kubernetes.asc
-      mode: "0644"
-      checksum: sha256:5fe267a9ae47ffd566624057f2c8f64ab8a786a9c650e92cc22135381b04f12b
-      
-  - name: Add k8s repo to APT sources
-    ansible.builtin.apt_repository:
-      repo: "deb [signed-by=/etc/apt/trusted.gpg.d/kubernetes.asc] https://pkgs.k8s.io/core:/stable:/v1.28/deb/ /"
-      state: present
-      update_cache: false
+    # It currently seems as though apt-key doesn't handle gpg keys well, so this is a temporary workaround
+    - name: Download k8s GPG key
+      ansible.builtin.get_url:
+        url: "https://pkgs.k8s.io/core:/stable:/v1.28/deb/Release.key"
+        dest: /etc/apt/trusted.gpg.d/kubernetes.asc
+        mode: "0644"
+        checksum: sha256:5fe267a9ae47ffd566624057f2c8f64ab8a786a9c650e92cc22135381b04f12b
 
-  # Setting the necessary kernel modules for k8s    
-  - name: Create /etc/modules-load.d/k8s.conf
-    ansible.builtin.file:
-      path: /etc/modules-load.d/k8s.conf
-      state: touch
+    - name: Add k8s repo to APT sources
+      ansible.builtin.apt_repository:
+        repo: "deb [signed-by=/etc/apt/trusted.gpg.d/kubernetes.asc] https://pkgs.k8s.io/core:/stable:/v1.28/deb/ /"
+        state: present
+        update_cache: false
 
-  - name: Set /etc/modules-load.d/k8s.conf
-    ansible.builtin.blockinfile:
-      path: /etc/modules-load.d/k8s.conf
-      block: | 
-        overlay
-        br_netfilter
+    # Setting the necessary kernel modules for k8s
+    - name: Create /etc/modules-load.d/k8s.conf
+      ansible.builtin.file:
+        path: /etc/modules-load.d/k8s.conf
+        state: touch
 
-  - name: Add the overlay module
-    ansible.builtin.modprobe:
-      state: present
-      persistent: present
-      name: overlay
+    - name: Set /etc/modules-load.d/k8s.conf
+      ansible.builtin.blockinfile:
+        path: /etc/modules-load.d/k8s.conf
+        block: |
+          overlay
+          br_netfilter
 
-  - name: Add the br_netfilter module
-    ansible.builtin.modprobe:
-      state: present
-      persistent: present
-      name: br_netfilter
+    - name: Add the overlay module
+      community.general.modprobe:
+        state: present
+        persistent: present
+        name: overlay
 
-  - name: Create /etc/sysctl.d/k8s.conf
-    ansible.builtin.file:
-      path: /etc/sysctl.d/k8s.conf
-      state: touch
+    - name: Add the br_netfilter module
+      community.general.modprobe:
+        state: present
+        persistent: present
+        name: br_netfilter
 
-  - name: Set /etc/sysctl.d/k8s.conf
-    ansible.builtin.blockinfile:
-      path: /etc/sysctl.d/k8s.conf
-      block: |
-        net.bridge.bridge-nf-call-iptables  = 1
-        net.bridge.bridge-nf-call-ip6tables = 1
-        net.ipv4.ip_forward                 = 1
+    - name: Create /etc/sysctl.d/k8s.conf
+      ansible.builtin.file:
+        path: /etc/sysctl.d/k8s.conf
+        state: touch
 
-  # This applies the above modules in the current session, saving us the need for a reboot      
-  - name: Apply sysctl params
-    ansible.builtin.shell: sudo sysctl --system
+    - name: Set /etc/sysctl.d/k8s.conf
+      ansible.builtin.blockinfile:
+        path: /etc/sysctl.d/k8s.conf
+        block: |
+          net.bridge.bridge-nf-call-iptables  = 1
+          net.bridge.bridge-nf-call-ip6tables = 1
+          net.ipv4.ip_forward                 = 1
 
-  - name: Install containerd
-    ansible.builtin.apt:
-      name: containerd.io
-      update_cache: true
+    # This applies the above modules in the current session, saving us the need for a reboot
+    - name: Apply sysctl params
+      ansible.builtin.shell: sudo sysctl --system
 
-  - name: Set systemd cgroup driver
-    ansible.builtin.template:
-      src: templates/cgroup.j2
-      dest: /etc/containerd/config.toml
+    - name: Install containerd
+      ansible.builtin.apt:
+        name: containerd.io
+        update_cache: true
 
-  - name: Restart containerd
-    ansible.builtin.systemd_service:
-      state: restarted
-      daemon_reload: true 
-      name: containerd.service
+    - name: Set systemd cgroup driver
+      ansible.builtin.template:
+        src: templates/cgroup.j2
+        dest: /etc/containerd/config.toml
 
-  - name: Install kubelet and kubeadm
-    ansible.builtin.apt:
-      name: "{{ item.name }}"
-      state: present
-    loop: "{{ kubernetes_software }}"
+    - name: Restart containerd
+      ansible.builtin.systemd_service:
+        state: restarted
+        daemon_reload: true
+        name: containerd.service
 
-  - name: Prevent kubelet and kubeadm from being updated
-    ansible.builtin.dpkg_selections:
-      name: "{{ item.name }}" 
-      selection: hold
-    loop: "{{ kubernetes_software }}"
-  
+    - name: Install kubelet and kubeadm
+      ansible.builtin.apt:
+        name: "{{ item.name }}"
+        state: present
+      loop: "{{ kubernetes_software }}"
+
+    - name: Prevent kubelet and kubeadm from being updated
+      ansible.builtin.dpkg_selections:
+        name: "{{ item.name }}"
+        selection: hold
+      loop: "{{ kubernetes_software }}"

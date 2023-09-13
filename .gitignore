@@ -15,4 +15,6 @@ crash.log
 # For built boxes
 *.box
 
+.vscode 
+
 values.pkr.hcl
