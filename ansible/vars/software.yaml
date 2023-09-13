@@ -1,0 +1,8 @@
+prereq_software:
+  - name: curl
+  - name: ca-certificates
+  - name: gnupg
+  - name: apt-transport-https
+kubernetes_software:
+  - name: kubelet
+  - name: kubeadm
