@@ -29,6 +29,6 @@ build {
   sources = ["source.digitalocean.kubeadm-base"]
 
   provisioner "ansible" {
-    playbook_file = "./ansible/k8s_worker.yaml"
+    playbook_file = "./ansible/main.yaml"
   }
 }

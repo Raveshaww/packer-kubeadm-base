@@ -18,3 +18,4 @@ crash.log
 .vscode 
 
 values.pkr.hcl
+ansible/roles

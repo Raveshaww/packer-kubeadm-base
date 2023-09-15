@@ -1,0 +1,41 @@
+---
+- name: Setup k8s worker
+  hosts: default
+  become: true
+  vars_files:
+    - vars/ports.yaml
+    - vars/software.yaml
+  tasks:
+    - name: Allow SSH via UFW
+      community.general.ufw:
+        rule: allow
+        port: 22
+        proto: tcp
+
+    - name: Enable UFW
+      community.general.ufw:
+        state: enabled
+
+    - name: Run apt updates
+      ansible.builtin.apt:
+        name: "*"
+        state: "latest"
+        update_cache: true
+
+    - name: Check if a reboot is required
+      ansible.builtin.stat:
+        path: /var/run/reboot-required
+        get_checksum: false
+      register: reboot_required_file
+
+    - name: Reboot server if required
+      ansible.builtin.reboot:
+      when: reboot_required_file.stat.exists
+
+    - name: Remove unused dependencies
+      ansible.builtin.apt:
+        autoremove: true    
+
+    - name: Run raveshaww.kubeadm_setup
+      ansible.builtin.include_role:
+        name: raveshaww.kubeadm_setup

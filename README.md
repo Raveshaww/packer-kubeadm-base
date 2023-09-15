@@ -10,6 +10,9 @@ A simple example Packer script to create an image that can act as a "base" for a
 6. Run `cp values/copy-values.pkr.hcl values/values.pkr.hcl`
 7. Populate the variables in `values/values.pkr.hcl` with the relevant data
     - Additional information about the variables can be found in `variables.pkr.hcl`
-8. Build the image with `packer build -var-file="values/values.pkr.hcl" .`
+8. Change into the ansible subdirectory with `cd ansible`
+9. Run `ansible-galaxy install -r requirements -p ./roles`
+10. Change back into the root directory of the project with `cd ..`
+11. Build the image with `packer build -var-file="values/values.pkr.hcl" .`
 # General Notes
 - The Ansible Playbook used in this example has only been tested against Ubuntu 22.04

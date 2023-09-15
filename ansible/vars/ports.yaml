@@ -1,7 +1,0 @@
-ports:
-  - port: "10250"
-    proto: tcp
-  - port: "30000:32767"
-    proto: tcp
-  - port: "22"
-    proto: tcp
